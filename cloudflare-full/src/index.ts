@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { jwt } from 'hono/jwt';
+import { verify as jwtVerify } from 'hono/jwt';
 import { HTTPException } from 'hono/http-exception';
 
 // Import converted services
@@ -17,7 +17,6 @@ import { SubscriptionService } from './services/subscription.service';
 export interface Env {
   DB: D1Database;
   KV: KVNamespace;
-  R2: R2Bucket;
   ASSETS: Fetcher;
   JWT_SECRET: string;
   TURNSTILE_SECRET: string;
@@ -58,59 +57,9 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization', 'X-Timezone-Offset'],
 }));
 
-// Serve static assets for non-API routes
-app.get('*', async (c) => {
-  const url = new URL(c.req.url);
-  
-  // Handle API routes first
-  if (url.pathname.startsWith('/api/')) {
-    return c.notFound();
-  }
-  
-  // Handle widget routes
-  if (url.pathname.startsWith('/js/')) {
-    return await handleWidgetRoutes(c);
-  }
-  
-  // Try to serve static assets first with better error handling
-  try {
-    const response = await c.env.ASSETS.fetch(c.req.raw);
-    console.log('ASSETS response status:', response.status, 'for path:', url.pathname);
-    // Serve any successful response, not just non-404s
-    if (response.status < 500) {
-      return response;
-    }
-  } catch (error) {
-    console.log('Assets fetch failed:', error);
-  }
-  
-  // For SPA routing, serve index.html for frontend routes
-  const frontendRoutes = ['/dashboard', '/login', '/projects', '/getting-start', '/forbidden', '/error'];
-  const isFrontendRoute = frontendRoutes.some(route => url.pathname.startsWith(route)) || url.pathname === '/';
-  
-  if (isFrontendRoute) {
-    // Serve the actual built React app instead of fallback HTML
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cusdis - Lightweight, privacy-first, open-source comment system</title>
-    <link rel="icon" href="/favicon.ico" />
-  <script type="module" crossorigin src="/assets/index-4ed4436d.js"></script>
-  <link rel="stylesheet" href="/assets/index-4efb08a1.css">
-</head>
-<body>
-    <div id="root"></div>
-    
-</body>
-</html>`;
-    
-    return c.html(html);
-  }
-  
-  return c.notFound();
-});
+// (Catch-all GET handler for static assets / SPA / widget.js is registered at the
+//  END of this file. Hono matches routes by registration order, so it must come
+//  after the specific API GET routes or it will shadow them.)
 
 // Widget routes
 async function handleWidgetRoutes(c: any) {
@@ -189,16 +138,11 @@ async function handleWidgetRoutes(c: any) {
 // API Routes
 
 // Authentication
+// Registration is closed. The first admin was registered against sugan@basicgravity.com
+// during initial deploy. Any further registration is rejected. To re-enable
+// (e.g. to add another moderator), remove this 403 and redeploy.
 app.post('/api/auth/register', async (c) => {
-  const authService = new AuthService(c.env);
-  const body = await c.req.json();
-  
-  try {
-    const result = await authService.register(body.email, body.password, body.name);
-    return c.json(result);
-  } catch (error: any) {
-    throw new HTTPException(400, { message: error.message });
-  }
+  throw new HTTPException(403, { message: 'Registration is closed' });
 });
 
 app.post('/api/auth/login', async (c) => {
@@ -213,10 +157,30 @@ app.post('/api/auth/login', async (c) => {
   }
 });
 
-// JWT middleware for protected routes
-const authMiddleware = jwt({
-  secret: async (c) => c.env.JWT_SECRET,
-});
+// JWT middleware for protected routes.
+//
+// Note: hono/jwt's built-in `jwt()` middleware takes the secret at INIT time and
+// does not invoke it as a function later, so the upstream `secret: async (c) => c.env.JWT_SECRET`
+// shipped broken (every protected request 401'd). Hand-rolled here so the secret
+// is read from c.env at request time, where it actually exists.
+const authMiddleware = async (c: any, next: any) => {
+  const authHeader = c.req.raw.headers.get('Authorization');
+  if (!authHeader) {
+    throw new HTTPException(401, { message: 'Missing Authorization header' });
+  }
+  const parts = authHeader.split(/\s+/);
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    throw new HTTPException(401, { message: 'Invalid Authorization header' });
+  }
+  const token = parts[1];
+  try {
+    const payload = await jwtVerify(token, c.env.JWT_SECRET);
+    c.set('jwtPayload', payload);
+  } catch (e) {
+    throw new HTTPException(401, { message: 'Invalid token' });
+  }
+  await next();
+};
 
 // Public API routes (for embedded widget)
 app.get('/api/open/comments', async (c) => {
@@ -575,6 +539,61 @@ app.get('/api/user/stats', async (c) => {
   
   const stats = await userService.getStats(payload.sub);
   return c.json(stats);
+});
+
+// Catch-all GET handler. Registered LAST so specific API GET routes (above) are
+// matched first by Hono. Serves the embed script, then static assets via the
+// ASSETS binding, then a fallback SPA shell for frontend routes.
+app.get('*', async (c) => {
+  const url = new URL(c.req.url);
+
+  // API path should never reach here in normal operation (specific routes match
+  // earlier). Return 404 if it does — a bare /api/foo with no matching handler.
+  if (url.pathname.startsWith('/api/')) {
+    return c.notFound();
+  }
+
+  // Embed script served from the worker so the appId / host are interpolated.
+  if (url.pathname.startsWith('/js/')) {
+    return await handleWidgetRoutes(c);
+  }
+
+  // Static assets (dist/ + frontend/public/) via the ASSETS binding.
+  try {
+    const response = await c.env.ASSETS.fetch(c.req.raw);
+    console.log('ASSETS response status:', response.status, 'for path:', url.pathname);
+    if (response.status < 500) {
+      return response;
+    }
+  } catch (error) {
+    console.log('Assets fetch failed:', error);
+  }
+
+  // SPA fallback for admin frontend routes.
+  const frontendRoutes = ['/dashboard', '/login', '/projects', '/getting-start', '/forbidden', '/error'];
+  const isFrontendRoute = frontendRoutes.some(route => url.pathname.startsWith(route)) || url.pathname === '/';
+
+  if (isFrontendRoute) {
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cusdis - Lightweight, privacy-first, open-source comment system</title>
+    <link rel="icon" href="/favicon.ico" />
+  <script type="module" crossorigin src="/assets/index-4ed4436d.js"></script>
+  <link rel="stylesheet" href="/assets/index-4efb08a1.css">
+</head>
+<body>
+    <div id="root"></div>
+
+</body>
+</html>`;
+
+    return c.html(html);
+  }
+
+  return c.notFound();
 });
 
 // Error handling

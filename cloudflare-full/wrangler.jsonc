@@ -28,20 +28,14 @@
     {
       "binding": "DB",
       "database_name": "suganthan-comments",
-      "database_id": "REPLACE_ME_AFTER_WRANGLER_D1_CREATE"
+      "database_id": "bcb03e18-0f56-45ab-9e63-61514da86ecc"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "REPLACE_ME_AFTER_WRANGLER_KV_CREATE",
-      "preview_id": "REPLACE_ME_AFTER_WRANGLER_KV_CREATE"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "R2",
-      "bucket_name": "suganthan-comments-uploads"
+      "id": "88480d0bd2b248fea759bb33f1b0f3c2",
+      "preview_id": "88480d0bd2b248fea759bb33f1b0f3c2"
     }
   ],
   "vars": {
