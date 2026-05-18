@@ -3,71 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cusdis Comments</title>
+    <title>Comments</title>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        :root {
+            /* Light mode tokens, mirrored from suganthan.com global.css */
+            --color-bg: 255, 255, 255;
+            --color-text: 30, 30, 30;
+            --color-text-secondary: 108, 108, 108;
+            --color-border: 238, 238, 238;
+            --color-accent: 44, 94, 156;
+            --color-success: 21, 87, 36;
+            --color-success-bg: 212, 237, 218;
+            --color-success-border: 195, 230, 203;
+            --color-error: 114, 28, 36;
+            --color-error-bg: 248, 215, 218;
+            --color-error-border: 245, 198, 203;
         }
+
+        body.dark {
+            /* Dark mode tokens */
+            --color-bg: 29, 30, 32;
+            --color-text: 218, 218, 219;
+            --color-text-secondary: 155, 156, 157;
+            --color-border: 51, 51, 51;
+            --color-accent: 82, 145, 215;
+            --color-success: 198, 239, 206;
+            --color-success-bg: 30, 70, 32;
+            --color-success-border: 50, 90, 52;
+            --color-error: 248, 215, 218;
+            --color-error-bg: 88, 33, 39;
+            --color-error-border: 108, 53, 59;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            font-size: 17px;
             line-height: 1.6;
-            color: #333;
-            background: transparent;
+            color: rgb(var(--color-text));
+            background-color: rgb(var(--color-bg));
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        .cusdis-container {
-            padding: 20px;
+        .container {
+            padding: 8px 0 24px;
             max-width: 100%;
         }
 
-        .cusdis-header {
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
+        .header {
+            margin-bottom: 16px;
         }
 
         .comment-count {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: rgb(var(--color-text-secondary));
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
+        /* Form */
         .comment-form {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
             font-weight: 500;
-            color: #555;
+            color: rgb(var(--color-text-secondary));
         }
 
         .form-control {
             width: 100%;
             padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: border-color 0.2s;
+            font-size: 0.95rem;
+            font-family: inherit;
+            line-height: 1.5;
+            color: rgb(var(--color-text));
+            background: rgb(var(--color-bg));
+            border: 1px solid rgb(var(--color-border));
+            border-radius: 6px;
+            transition: border-color 0.15s ease;
+        }
+
+        .form-control::placeholder {
+            color: rgb(var(--color-text-secondary));
+            opacity: 0.7;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #007cba;
-            box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.1);
+            border-color: rgb(var(--color-text-secondary));
         }
 
         textarea.form-control {
@@ -77,223 +113,254 @@
 
         .form-row {
             display: flex;
-            gap: 15px;
+            gap: 12px;
         }
 
         .form-row .form-group {
             flex: 1;
+            min-width: 0;
         }
 
         .checkbox-group {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: rgb(var(--color-text-secondary));
         }
 
         .checkbox-group input[type="checkbox"] {
             width: auto;
+            accent-color: rgb(var(--color-accent));
         }
 
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 500;
+        .checkbox-group label {
+            margin: 0;
             cursor: pointer;
-            transition: background-color 0.2s;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-family: inherit;
+            font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid rgb(var(--color-border));
+            color: rgb(var(--color-text-secondary));
+            background: transparent;
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
+        }
+
+        .btn:hover:not(:disabled) {
+            color: rgb(var(--color-text));
+            border-color: rgb(var(--color-text-secondary));
         }
 
         .btn-primary {
-            background: #007cba;
-            color: white;
+            background: rgb(var(--color-text));
+            color: rgb(var(--color-bg));
+            border-color: rgb(var(--color-text));
         }
 
-        .btn-primary:hover {
-            background: #006ba1;
+        .btn-primary:hover:not(:disabled) {
+            opacity: 0.9;
+            color: rgb(var(--color-bg));
+            border-color: rgb(var(--color-text));
         }
 
-        .btn-primary:disabled {
-            background: #ccc;
+        .btn:disabled {
+            opacity: 0.55;
             cursor: not-allowed;
         }
 
+        .btn-link {
+            background: transparent;
+            border: none;
+            color: rgb(var(--color-accent));
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            padding: 0;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .btn-link:hover {
+            opacity: 0.8;
+        }
+
+        /* Turnstile */
+        .form-group .cf-turnstile {
+            display: inline-block;
+        }
+
+        /* Comments list */
         .comments-list {
-            margin-top: 30px;
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
         .comment {
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 15px;
-            background: white;
+            padding: 16px 0;
+            border-top: 1px solid rgb(var(--color-border));
         }
 
         .comment-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
         }
 
         .comment-author {
             font-weight: 600;
-            color: #333;
+            font-size: 0.95rem;
+            color: rgb(var(--color-text));
         }
 
-        .comment-author.moderator {
-            color: #007cba;
+        .comment-author.moderator::after {
+            content: "Author";
+            display: inline-block;
+            margin-left: 8px;
+            padding: 1px 8px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgb(var(--color-bg));
+            background: rgb(var(--color-accent));
+            border-radius: 10px;
+            vertical-align: 2px;
         }
 
         .comment-date {
-            color: #666;
-            font-size: 12px;
+            color: rgb(var(--color-text-secondary));
+            font-size: 0.75rem;
         }
 
         .comment-content {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
             line-height: 1.6;
+            color: rgb(var(--color-text));
+            word-wrap: break-word;
         }
 
         .comment-actions {
             display: flex;
-            gap: 10px;
-        }
-
-        .btn-link {
-            background: none;
-            border: none;
-            color: #007cba;
-            text-decoration: underline;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .btn-link:hover {
-            color: #006ba1;
+            gap: 12px;
         }
 
         .replies {
-            margin-left: 30px;
-            margin-top: 15px;
+            margin-left: 20px;
+            margin-top: 16px;
+            padding-left: 16px;
+            border-left: 2px solid rgb(var(--color-border));
+        }
+
+        .replies .comment {
+            border-top: none;
+            padding: 12px 0;
+        }
+
+        .replies .comment + .comment {
+            border-top: 1px solid rgb(var(--color-border));
         }
 
         .reply-form {
-            margin-left: 30px;
-            margin-top: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 4px;
+            margin-top: 12px;
+            padding: 16px;
+            background: rgba(var(--color-text-secondary), 0.04);
+            border-radius: 6px;
             display: none;
         }
 
-        .loading {
+        /* Messages */
+        .loading,
+        .empty {
             text-align: center;
-            padding: 20px;
-            color: #666;
+            padding: 24px 0;
+            color: rgb(var(--color-text-secondary));
+            font-size: 0.9rem;
+        }
+
+        .error,
+        .success {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-bottom: 14px;
+            border: 1px solid;
         }
 
         .error {
-            color: #dc3545;
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
+            color: rgb(var(--color-error));
+            background: rgb(var(--color-error-bg));
+            border-color: rgb(var(--color-error-border));
         }
 
         .success {
-            color: #155724;
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
+            color: rgb(var(--color-success));
+            background: rgb(var(--color-success-bg));
+            border-color: rgb(var(--color-success-border));
         }
 
-        /* Dark theme */
-        .dark {
-            background: #1a1a1a;
-            color: #e4e4e4;
-        }
-
-        .dark .comment-form,
-        .dark .comment,
-        .dark .reply-form {
-            background: #2d2d2d;
-            border-color: #404040;
-        }
-
-        .dark .form-control {
-            background: #333;
-            color: #e4e4e4;
-            border-color: #404040;
-        }
-
-        .dark .form-control:focus {
-            border-color: #007cba;
-        }
-
-        .dark .cusdis-header {
-            border-color: #404040;
-        }
-
-        .dark .comment-count {
-            color: #e4e4e4;
-        }
-
-        @media (max-width: 768px) {
+        @media (max-width: 600px) {
             .form-row {
                 flex-direction: column;
                 gap: 0;
             }
-
             .replies {
-                margin-left: 15px;
-            }
-
-            .reply-form {
-                margin-left: 15px;
+                margin-left: 8px;
+                padding-left: 12px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="cusdis-container">
-        <div class="cusdis-header">
+    <div class="container">
+        <div class="header">
             <div class="comment-count">Loading comments...</div>
         </div>
 
         <div class="comment-form">
             <form id="comment-form">
                 <div class="form-group">
-                    <label for="content">Comment *</label>
-                    <textarea id="content" name="content" class="form-control" required placeholder="Write your comment here..."></textarea>
+                    <label for="content">Comment</label>
+                    <textarea id="content" name="content" class="form-control" required placeholder="Share your thoughts..."></textarea>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="nickname">Name *</label>
+                        <label for="nickname">Name</label>
                         <input type="text" id="nickname" name="nickname" class="form-control" required placeholder="Your name">
                     </div>
                     <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" class="form-control" placeholder="your@email.com (optional)">
+                        <label for="email">Email <span style="font-weight:400;opacity:0.7">(optional)</span></label>
+                        <input type="email" id="email" name="email" class="form-control" placeholder="your@email.com">
                     </div>
                 </div>
 
                 <div class="checkbox-group">
                     <input type="checkbox" id="acceptNotify" name="acceptNotify">
-                    <label for="acceptNotify">Notify me when someone replies</label>
+                    <label for="acceptNotify">Email me when someone replies</label>
                 </div>
 
                 <div class="form-group">
                     <div class="cf-turnstile" data-sitekey="0x4AAAAAADRvnHqwcYsyc_i1" data-theme="auto"></div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Post Comment</button>
+                <button type="submit" class="btn btn-primary">Post comment</button>
             </form>
         </div>
 
@@ -304,7 +371,7 @@
     </div>
 
     <script>
-        class CusdisWidget {
+        class CommentsWidget {
             constructor() {
                 this.params = this.getURLParams();
                 this.currentPage = 1;
@@ -324,24 +391,34 @@
             }
 
             init() {
-                // Apply theme
-                if (this.params.theme === 'dark') {
-                    document.body.classList.add('dark');
-                }
+                this.applyTheme(this.params.theme);
 
-                // Setup form submission
+                // Listen for theme updates from the parent page (Astro layouts
+                // dispatch a postMessage when the user toggles light/dark).
+                window.addEventListener('message', (e) => {
+                    if (e.data && e.data.type === 'comments-theme') {
+                        this.applyTheme(e.data.theme);
+                    }
+                });
+
                 document.getElementById('comment-form').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.submitComment();
                 });
 
-                // Load comments
                 this.loadComments();
-
-                // Auto-resize iframe
                 this.resizeIframe();
+
                 const observer = new MutationObserver(() => this.resizeIframe());
                 observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.body.classList.add('dark');
+                } else {
+                    document.body.classList.remove('dark');
+                }
             }
 
             async loadComments(page = 1) {
@@ -352,7 +429,7 @@
                             'X-Timezone-Offset': new Date().getTimezoneOffset().toString()
                         }
                     });
-                    
+
                     if (!response.ok) {
                         throw new Error('Failed to load comments');
                     }
@@ -368,30 +445,23 @@
 
             renderComments(data) {
                 const { commentCount, data: comments } = data;
-                
-                // Update comment count
-                document.querySelector('.comment-count').textContent = 
+
+                document.querySelector('.comment-count').textContent =
                     commentCount === 0 ? 'No comments yet' :
                     commentCount === 1 ? '1 comment' : `${commentCount} comments`;
 
                 const container = document.getElementById('comments-container');
-                
+
                 if (comments.length === 0) {
-                    container.innerHTML = '<div class="loading">No comments yet. Be the first to comment!</div>';
+                    container.innerHTML = '<div class="empty">Be the first to comment.</div>';
                     this.resizeIframe();
                     return;
                 }
 
-                const commentsHtml = comments.map(comment => this.renderComment(comment)).join('');
-                
-                container.innerHTML = `
-                    <div class="comments-list">
-                        ${commentsHtml}
-                    </div>
-                `;
+                const commentsHtml = comments.map((comment) => this.renderComment(comment)).join('');
+                container.innerHTML = `<div class="comments-list">${commentsHtml}</div>`;
 
-                // Setup reply buttons
-                container.querySelectorAll('.btn-reply').forEach(btn => {
+                container.querySelectorAll('.btn-reply').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         const commentId = e.target.dataset.commentId;
                         this.toggleReplyForm(commentId);
@@ -402,8 +472,9 @@
             }
 
             renderComment(comment) {
-                const repliesHtml = comment.replies.data.length > 0 ? 
-                    `<div class="replies">${comment.replies.data.map(reply => this.renderComment(reply)).join('')}</div>` : '';
+                const repliesHtml = comment.replies.data.length > 0
+                    ? `<div class="replies">${comment.replies.data.map((reply) => this.renderComment(reply)).join('')}</div>`
+                    : '';
 
                 const authorClass = comment.moderator_id ? 'comment-author moderator' : 'comment-author';
                 const authorName = comment.moderator?.display_name || comment.by_nickname;
@@ -432,7 +503,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group cf-turnstile-container"></div>
-                                <button type="submit" class="btn btn-primary">Post Reply</button>
+                                <button type="submit" class="btn btn-primary">Post reply</button>
                                 <button type="button" class="btn-link" onclick="this.closest('.reply-form').style.display='none'">Cancel</button>
                             </form>
                         </div>
@@ -444,21 +515,22 @@
             toggleReplyForm(commentId) {
                 const form = document.getElementById(`reply-form-${commentId}`);
                 const isVisible = form.style.display === 'block';
-                
-                // Hide all reply forms
-                document.querySelectorAll('.reply-form').forEach(f => f.style.display = 'none');
-                
+
+                document.querySelectorAll('.reply-form').forEach((f) => f.style.display = 'none');
+
                 if (!isVisible) {
                     form.style.display = 'block';
 
-                    // Setup form submission
                     const formElement = form.querySelector('.reply-form-inner');
-                    formElement.addEventListener('submit', (e) => {
-                        e.preventDefault();
-                        this.submitReply(formElement);
-                    });
+                    if (!formElement.dataset.bound) {
+                        formElement.dataset.bound = '1';
+                        formElement.addEventListener('submit', (e) => {
+                            e.preventDefault();
+                            this.submitReply(formElement);
+                        });
+                    }
 
-                    // Render Turnstile on demand (one widget per reply form, only when opened).
+                    // Render Turnstile on demand only when the reply form opens.
                     const turnstileContainer = form.querySelector('.cf-turnstile-container');
                     if (window.turnstile && turnstileContainer && !turnstileContainer.dataset.rendered) {
                         window.turnstile.render(turnstileContainer, {
@@ -474,18 +546,16 @@
 
             async submitComment() {
                 if (this.isSubmitting) return;
-                
+
                 const form = document.getElementById('comment-form');
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData);
 
                 if (!data.content.trim() || !data.nickname.trim()) {
-                    this.showError('Please fill in all required fields.');
+                    this.showError('Please fill in name and comment.');
                     return;
                 }
 
-                // Turnstile hidden input has name="cf-turnstile-response". Pull it from FormData
-                // and refuse to submit if missing — saves a wasted server round-trip.
                 const turnstileToken = data['cf-turnstile-response'];
                 if (!turnstileToken) {
                     this.showError('Please complete the anti-bot check before posting.');
@@ -500,9 +570,7 @@
                 try {
                     const response = await fetch('/api/open/comments', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             appId: this.params.appId,
                             pageId: this.params.pageId,
@@ -520,10 +588,10 @@
                         throw new Error('Failed to post comment');
                     }
 
-                    this.showSuccess('Comment posted successfully! It will appear after moderation.');
+                    this.showSuccess('Comment posted. It will appear after moderation.');
                     form.reset();
                     if (window.turnstile) window.turnstile.reset();
-                    this.loadComments(); // Reload to show updated count
+                    this.loadComments();
                 } catch (error) {
                     console.error('Error posting comment:', error);
                     this.showError('Failed to post comment. Please try again.');
@@ -531,7 +599,7 @@
                 } finally {
                     this.isSubmitting = false;
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Post Comment';
+                    submitBtn.textContent = 'Post comment';
                 }
             }
 
@@ -541,7 +609,7 @@
                 const parentId = form.dataset.parentId;
 
                 if (!data.content.trim() || !data.nickname.trim()) {
-                    this.showError('Please fill in all required fields.');
+                    this.showError('Please fill in name and reply.');
                     return;
                 }
 
@@ -558,9 +626,7 @@
                 try {
                     const response = await fetch('/api/open/comments', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             appId: this.params.appId,
                             pageId: this.params.pageId,
@@ -578,16 +644,16 @@
                         throw new Error('Failed to post reply');
                     }
 
-                    this.showSuccess('Reply posted successfully! It will appear after moderation.');
+                    this.showSuccess('Reply posted. It will appear after moderation.');
                     form.reset();
                     form.closest('.reply-form').style.display = 'none';
-                    this.loadComments(); // Reload to show updated count
+                    this.loadComments();
                 } catch (error) {
                     console.error('Error posting reply:', error);
                     this.showError('Failed to post reply. Please try again.');
                 } finally {
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Post Reply';
+                    submitBtn.textContent = 'Post reply';
                 }
             }
 
@@ -601,13 +667,8 @@
                 this.resizeIframe();
             }
 
-            showError(message) {
-                this.showMessage(message, 'error');
-            }
-
-            showSuccess(message) {
-                this.showMessage(message, 'success');
-            }
+            showError(message) { this.showMessage(message, 'error'); }
+            showSuccess(message) { this.showMessage(message, 'success'); }
 
             resizeIframe() {
                 setTimeout(() => {
@@ -620,8 +681,7 @@
             }
         }
 
-        // Initialize widget
-        const widget = new CusdisWidget();
+        const widget = new CommentsWidget();
     </script>
 </body>
 </html>
