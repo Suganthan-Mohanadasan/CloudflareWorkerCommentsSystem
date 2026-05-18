@@ -7,6 +7,7 @@ export enum UnSubscribeType {
 
 export enum SecretKey {
   ApproveComment = 'approve_comment',
+  DeleteComment = 'delete_comment',
   Unsubscribe = 'unsubscribe',
   AcceptNotify = 'accept_notify'
 }
@@ -17,6 +18,11 @@ export module TokenBody {
   }
 
   export type ApproveComment = {
+    commentId: string,
+    ownerId: string
+  }
+
+  export type DeleteComment = {
     commentId: string,
     ownerId: string
   }
@@ -96,6 +102,33 @@ export class TokenService {
 
   async validateApproveToken(token: string) {
     return await this.validate(token, SecretKey.ApproveComment) as TokenBody.ApproveComment;
+  }
+
+  async genDeleteToken(commentId: string) {
+    const comment = await this.env.DB.prepare(`
+      SELECT pr.owner_id
+      FROM comments c
+      INNER JOIN pages p ON c.page_id = p.id
+      INNER JOIN projects pr ON p.project_id = pr.id
+      WHERE c.id = ?
+    `).bind(commentId).first() as any;
+
+    if (!comment) {
+      throw new Error('Comment not found');
+    }
+
+    return this.sign(
+      SecretKey.DeleteComment,
+      {
+        commentId,
+        ownerId: comment.owner_id,
+      } as TokenBody.DeleteComment,
+      3 * 24 * 60 * 60 // 3 days
+    );
+  }
+
+  async validateDeleteToken(token: string) {
+    return await this.validate(token, SecretKey.DeleteComment) as TokenBody.DeleteComment;
   }
 
   async validateUnsubscribeToken(token: string) {

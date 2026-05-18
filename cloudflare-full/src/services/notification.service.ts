@@ -51,10 +51,10 @@ export class NotificationService {
     }
 
     const notificationEmail = project.notification_email || project.email;
-    
+
     try {
-      const unsubscribeToken = await this.tokenService.genUnsubscribeNewCommentToken(project.owner_id);
       const approveToken = await this.tokenService.genApproveToken(comment.id);
+      const deleteToken = await this.tokenService.genDeleteToken(comment.id);
 
       await this.emailService.sendNewCommentNotification(
         notificationEmail,
@@ -62,9 +62,10 @@ export class NotificationService {
         fullComment.page_title || fullComment.page_slug,
         comment.content,
         comment.by_nickname,
-        `${this.env.SITE_URL}/open/approve?token=${approveToken}`,
-        `${this.env.SITE_URL}/dashboard`,
-        `${this.env.SITE_URL}/api/open/unsubscribe?token=${unsubscribeToken}`
+        // Upstream wrote /open/approve (no /api). Real endpoint is /api/open/approve.
+        `${this.env.SITE_URL}/api/open/approve?token=${approveToken}`,
+        `${this.env.SITE_URL}/api/open/delete?token=${deleteToken}`,
+        `${this.env.SITE_URL}/dashboard`
       );
 
       console.log('Notification email sent to:', notificationEmail);

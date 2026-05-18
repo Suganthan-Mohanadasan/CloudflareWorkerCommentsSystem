@@ -17,26 +17,27 @@
     "db:migrate": "npx wrangler d1 execute suganthan-comments --remote --file=./schema.sql"
   },
   "dependencies": {
+    "@emotion/react": "^11.11.0",
+    "@mantine/core": "^7.0.0",
+    "@mantine/hooks": "^7.0.0",
+    "aws4fetch": "^1.0.20",
+    "axios": "^1.6.0",
     "hono": "^4.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.0",
-    "react-query": "^3.39.3",
-    "axios": "^1.6.0",
-    "@mantine/core": "^7.0.0",
-    "@mantine/hooks": "^7.0.0",
-    "@emotion/react": "^11.11.0",
+    "react-helmet-async": "^1.3.0",
     "react-hook-form": "^7.45.0",
     "react-icons": "^4.10.0",
-    "react-helmet-async": "^1.3.0"
+    "react-query": "^3.39.3",
+    "react-router-dom": "^6.8.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240909.0",
     "@types/react": "^18.2.14",
     "@types/react-dom": "^18.2.6",
     "@vitejs/plugin-react": "^4.0.0",
-    "wrangler": "^3.78.0",
     "typescript": "^5.0.0",
-    "vite": "^4.3.0"
+    "vite": "^4.3.0",
+    "wrangler": "^3.78.0"
   }
 }

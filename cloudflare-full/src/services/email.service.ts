@@ -1,45 +1,58 @@
 import { Env } from '../index';
+import { AwsClient } from 'aws4fetch';
 
 export class EmailService {
   constructor(private env: Env) {}
 
+  // Sends via AWS SES SendEmail (HTTP), signed with SigV4 via aws4fetch.
+  // The IAM user attached to AWS_ACCESS_KEY_ID needs ses:SendEmail and the FROM
+  // address must be a verified SES identity (domain or single-email).
   async send(options: {
     to: string;
     subject: string;
     html: string;
     from?: string;
   }) {
-    if (!this.env.SENDGRID_API_KEY) {
-      console.warn('SendGrid API key not configured, email not sent');
+    if (!this.env.AWS_ACCESS_KEY_ID || !this.env.AWS_SECRET_ACCESS_KEY || !this.env.AWS_REGION) {
+      console.warn('AWS SES credentials not configured, email not sent');
       return;
     }
 
-    const fromEmail = options.from || this.env.FROM_EMAIL || 'noreply@cusdis.com';
+    const fromEmail = options.from || this.env.FROM_EMAIL || 'noreply@suganthan.com';
+    const region = this.env.AWS_REGION;
+
+    const aws = new AwsClient({
+      accessKeyId: this.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: this.env.AWS_SECRET_ACCESS_KEY,
+      service: 'ses',
+      region,
+    });
+
+    // SES SendEmail is form-encoded. application/x-www-form-urlencoded body
+    // with Action + Destination + Message fields. Plain HTML, no attachments
+    // so SendEmail is enough (no need for SendRawEmail).
+    const body = new URLSearchParams({
+      Action: 'SendEmail',
+      Version: '2010-12-01',
+      Source: fromEmail,
+      'Destination.ToAddresses.member.1': options.to,
+      'Message.Subject.Data': options.subject,
+      'Message.Subject.Charset': 'UTF-8',
+      'Message.Body.Html.Data': options.html,
+      'Message.Body.Html.Charset': 'UTF-8',
+    });
 
     try {
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      const res = await aws.fetch(`https://email.${region}.amazonaws.com/`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.env.SENDGRID_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          personalizations: [{
-            to: [{ email: options.to }],
-            subject: options.subject,
-          }],
-          from: { email: fromEmail },
-          content: [{
-            type: 'text/html',
-            value: options.html,
-          }],
-        }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('SendGrid error:', error);
-        throw new Error(`SendGrid API error: ${response.status}`);
+      if (!res.ok) {
+        const errorBody = await res.text();
+        console.error('SES error:', res.status, errorBody);
+        throw new Error(`SES API error: ${res.status}`);
       }
 
       console.log('Email sent successfully to:', options.to);
@@ -56,38 +69,51 @@ export class EmailService {
     commentContent: string,
     commenterName: string,
     approveUrl: string,
+    deleteUrl: string,
     dashboardUrl: string
   ) {
+    // HTML-escape comment content + nickname so a malicious commenter cannot
+    // inject markup into the moderator's inbox.
+    const esc = (s: string) => s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>New Comment on ${projectTitle}</h2>
-        <p>A new comment has been posted on your page "<strong>${pageTitle}</strong>":</p>
-        
+        <h2>New comment on ${esc(projectTitle)}</h2>
+        <p>Pending moderation on "<strong>${esc(pageTitle)}</strong>".</p>
+
         <div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #007cba; margin: 20px 0;">
-          <p><strong>${commenterName}</strong> wrote:</p>
-          <p>${commentContent}</p>
+          <p><strong>${esc(commenterName)}</strong> wrote:</p>
+          <p>${esc(commentContent)}</p>
         </div>
-        
+
         <div style="margin: 30px 0;">
-          <a href="${approveUrl}" style="display: inline-block; background: #007cba; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
-            Approve Comment
+          <a href="${approveUrl}" style="display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+            Approve
           </a>
-          <a href="${dashboardUrl}" style="display: inline-block; background: #666; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
-            View Dashboard
+          <a href="${deleteUrl}" style="display: inline-block; background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
+            Delete (spam)
           </a>
         </div>
-        
+
+        <p style="color: #666; font-size: 13px;">
+          Tokens expire in 3 days. <a href="${dashboardUrl}">Open the admin dashboard</a> to manage existing comments.
+        </p>
+
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
         <p style="color: #666; font-size: 12px;">
-          This email was sent by Cusdis comment system. 
-          <a href="${dashboardUrl}/settings">Manage your notification preferences</a>
+          Sent by the suganthan.com comments worker.
         </p>
       </div>
     `;
 
     await this.send({
       to,
-      subject: `New comment on ${projectTitle}`,
+      subject: `New comment on ${projectTitle}: ${commenterName}`,
       html,
     });
   }

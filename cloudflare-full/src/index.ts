@@ -13,6 +13,7 @@ import { PageService } from './services/page.service';
 import { TokenService } from './services/token.service';
 import { UsageService } from './services/usage.service';
 import { SubscriptionService } from './services/subscription.service';
+import { NotificationService } from './services/notification.service';
 
 export interface Env {
   DB: D1Database;
@@ -20,7 +21,11 @@ export interface Env {
   ASSETS: Fetcher;
   JWT_SECRET: string;
   TURNSTILE_SECRET: string;
-  SENDGRID_API_KEY?: string;
+  // AWS SES outbound. Used by EmailService to send moderation notifications.
+  AWS_ACCESS_KEY_ID?: string;
+  AWS_SECRET_ACCESS_KEY?: string;
+  AWS_REGION?: string;
+  // FROM_EMAIL is the verified SES sender (e.g. comments@suganthan.com), set in vars.
   FROM_EMAIL?: string;
   SITE_URL: string;
 }
@@ -255,8 +260,18 @@ app.post('/api/open/comments', async (c) => {
     pageTitle,
     pageUrl,
   }, parentId);
-  
-  // Send confirmation email if requested
+
+  // Fire the moderator notification email. This was dead code upstream —
+  // NotificationService.addComment was defined but never called from this handler.
+  try {
+    const notificationService = new NotificationService(c.env);
+    await notificationService.addComment(comment, appId);
+  } catch (error) {
+    // Never fail the comment submission because email failed. Log and move on.
+    console.error('Failed to send moderator notification:', error);
+  }
+
+  // Reply-confirm email for the COMMENTER who opted in to "notify me on replies".
   if (acceptNotify && email) {
     try {
       await emailService.sendConfirmReplyNotification(email, pageTitle || pageId, comment.id);
@@ -264,7 +279,7 @@ app.post('/api/open/comments', async (c) => {
       console.error('Failed to send confirmation email:', error);
     }
   }
-  
+
   return c.json({ data: comment });
 });
 
@@ -272,17 +287,38 @@ app.post('/api/open/comments', async (c) => {
 app.get('/api/open/approve', async (c) => {
   const commentService = new CommentService(c.env);
   const tokenService = new TokenService(c.env);
-  
+
   const token = c.req.query('token');
-  
+
   if (!token) {
     return c.text('Invalid token', 400);
   }
-  
+
   try {
     const result = await tokenService.validateApproveToken(token);
     await commentService.approve(result.commentId);
     return c.text('Approved!');
+  } catch (error) {
+    return c.text('Invalid token', 403);
+  }
+});
+
+// Open delete route (for email "delete spam" links). Soft-deletes the comment;
+// row stays in D1 with deleted_at set, never re-surfaces in the public widget.
+app.get('/api/open/delete', async (c) => {
+  const commentService = new CommentService(c.env);
+  const tokenService = new TokenService(c.env);
+
+  const token = c.req.query('token');
+
+  if (!token) {
+    return c.text('Invalid token', 400);
+  }
+
+  try {
+    const result = await tokenService.validateDeleteToken(token);
+    await commentService.delete(result.commentId);
+    return c.text('Deleted.');
   } catch (error) {
     return c.text('Invalid token', 403);
   }
@@ -451,24 +487,38 @@ app.get('/api/project/:id', async (c) => {
   return c.json({ data: project });
 });
 
-// Comments API (admin)
+// Comments API (admin).
+//
+// Upstream had `onlyOwn: true` here, but the comment.service `onlyOwn` branch
+// appends `AND pr.owner_id = ?` to the WHERE clause without binding a param,
+// which 500s every admin list. Fixed by checking project ownership up front
+// against the JWT payload and then listing without onlyOwn.
+//
+// Supports ?approved=0|1 to filter pending vs approved.
 app.get('/api/comment', async (c) => {
   const commentService = new CommentService(c.env);
+  const projectService = new ProjectService(c.env);
   const payload = c.get('jwtPayload');
   const projectId = c.req.query('projectId');
+  const approvedParam = c.req.query('approved');
   const page = parseInt(c.req.query('page') || '1');
   const timezoneOffset = parseInt(c.req.header('X-Timezone-Offset') || '0');
-  
+
   if (!projectId) {
     throw new HTTPException(400, { message: 'projectId is required' });
   }
-  
-  const comments = await commentService.getComments(projectId, timezoneOffset, {
-    onlyOwn: true,
-    page,
-    pageSize: 20,
-  });
-  
+
+  const project = await projectService.getByIdAndOwner(projectId, payload.sub);
+  if (!project) {
+    throw new HTTPException(404, { message: 'Project not found' });
+  }
+
+  const opts: any = { page, pageSize: 20 };
+  if (approvedParam === '0') opts.approved = false;
+  if (approvedParam === '1') opts.approved = true;
+
+  const comments = await commentService.getComments(projectId, timezoneOffset, opts);
+
   return c.json({ data: comments });
 });
 
