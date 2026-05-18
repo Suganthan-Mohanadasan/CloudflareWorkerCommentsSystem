@@ -409,8 +409,19 @@
                 this.loadComments();
                 this.resizeIframe();
 
-                const observer = new MutationObserver(() => this.resizeIframe());
-                observer.observe(document.body, { childList: true, subtree: true });
+                // Watch body height (ResizeObserver) AND any DOM mutation. Without
+                // ResizeObserver the Turnstile inner iframe loading async slips past
+                // resize fires and the parent iframe ends up with its own scrollbar.
+                if (typeof ResizeObserver !== 'undefined') {
+                    const ro = new ResizeObserver(() => this.resizeIframe());
+                    ro.observe(document.body);
+                }
+                const mo = new MutationObserver(() => this.resizeIframe());
+                mo.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+                // Belt-and-braces: re-measure after Turnstile finishes (it can take
+                // up to a few seconds on slow networks).
+                [500, 1500, 3000].forEach((delay) => setTimeout(() => this.resizeIframe(), delay));
             }
 
             applyTheme(theme) {
@@ -671,13 +682,22 @@
             showSuccess(message) { this.showMessage(message, 'success'); }
 
             resizeIframe() {
-                setTimeout(() => {
-                    const height = document.body.scrollHeight;
+                // Use the larger of scrollHeight and the bounding box, plus a tiny
+                // pad to avoid a 1-pixel scrollbar from sub-pixel rounding.
+                requestAnimationFrame(() => {
+                    const body = document.body;
+                    const html = document.documentElement;
+                    const height = Math.max(
+                        body.scrollHeight,
+                        body.offsetHeight,
+                        html.scrollHeight,
+                        html.offsetHeight
+                    ) + 8;
                     window.parent.postMessage({
                         type: 'cusdis-resize',
                         height: height
                     }, '*');
-                }, 100);
+                });
             }
         }
 
