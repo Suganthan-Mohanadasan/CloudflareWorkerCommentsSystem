@@ -263,11 +263,16 @@ export class CommentService {
       throw new Error('Failed to create comment');
     }
 
+    // Return DB-canonical property names so downstream consumers (notification
+    // service, etc.) can read by_nickname/by_email consistently. Spreading
+    // ...body would have leaked the request-side names (nickname/email).
     return {
       id: commentId,
-      ...body,
+      content,
+      by_email: email || null,
+      by_nickname: nickname,
       page_id: page.id,
-      parent_id: parentId,
+      parent_id: parentId || null,
       approved: false,
       created_at: new Date().toISOString(),
     };

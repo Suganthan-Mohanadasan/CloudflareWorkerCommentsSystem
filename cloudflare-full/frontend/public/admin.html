@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>suganthan.com comments admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fafafa;
+      color: #222;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header .meta { font-size: 13px; color: #666; }
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #222;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .btn:hover { background: #f5f5f5; border-color: #999; }
+    .btn-primary {
+      background: #1a6dd4; border-color: #1a6dd4; color: #fff;
+    }
+    .btn-primary:hover { background: #155bbb; border-color: #155bbb; }
+    .btn-approve {
+      background: #28a745; border-color: #28a745; color: #fff;
+    }
+    .btn-approve:hover { background: #218838; border-color: #218838; }
+    .btn-delete {
+      background: #dc3545; border-color: #dc3545; color: #fff;
+    }
+    .btn-delete:hover { background: #c82333; border-color: #c82333; }
+    .btn-link {
+      background: transparent;
+      border: none;
+      color: #1a6dd4;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0;
+      text-decoration: underline;
+    }
+    .login-box {
+      max-width: 380px;
+      margin: 60px auto;
+      padding: 30px;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+    }
+    .login-box h1 { font-size: 18px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #444;
+    }
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .form-control:focus { outline: none; border-color: #1a6dd4; }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .tab {
+      padding: 10px 16px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-size: 14px;
+      cursor: pointer;
+      color: #666;
+    }
+    .tab.active {
+      color: #1a6dd4;
+      border-bottom-color: #1a6dd4;
+      font-weight: 500;
+    }
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+      font-size: 14px;
+    }
+    .comment {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .comment-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+    .comment-author { color: #222; font-weight: 600; font-size: 14px; }
+    .comment-page {
+      font-size: 12px;
+      color: #999;
+      margin-top: 2px;
+    }
+    .comment-content {
+      margin: 10px 0 14px;
+      color: #222;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+    .comment-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .error-banner {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .pill-pending { background: #fff3cd; color: #856404; }
+    .pill-approved { background: #d4edda; color: #155724; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login view -->
+    <div id="login-view" class="login-box" style="display: none;">
+      <h1>Sign in</h1>
+      <div id="login-error" class="error-banner" style="display: none;"></div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" class="form-control" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" class="form-control" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Sign in</button>
+      </form>
+    </div>
+
+    <!-- Admin view -->
+    <div id="admin-view" style="display: none;">
+      <div class="header">
+        <div>
+          <h1>Comments</h1>
+          <div class="meta" id="header-meta"></div>
+        </div>
+        <button id="logout-btn" class="btn">Sign out</button>
+      </div>
+      <div id="admin-error" class="error-banner" style="display: none;"></div>
+      <div class="tabs">
+        <button class="tab active" data-filter="0">Pending</button>
+        <button class="tab" data-filter="1">Approved</button>
+        <button class="tab" data-filter="">All</button>
+      </div>
+      <div id="comments-list">
+        <div class="empty">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Vanilla JS admin. Uses the same /api endpoints the React SPA was meant to
+    // hit, but skips the upstream React/Mantine/react-query stack which kept
+    // rendering blank.
+    const PROJECT_ID = '2e0fc76f-142d-426f-96bd-91ee46ca2a75';
+    const TOKEN_KEY = 'commentsAdminToken';
+
+    let currentFilter = '0'; // pending by default
+
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+    function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+    function showLogin() {
+      document.getElementById('login-view').style.display = 'block';
+      document.getElementById('admin-view').style.display = 'none';
+    }
+
+    function showAdmin() {
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('admin-view').style.display = 'block';
+      loadComments();
+    }
+
+    function showLoginError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function showAdminError(msg) {
+      const el = document.getElementById('admin-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    async function api(path, opts = {}) {
+      const token = getToken();
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(path, { ...opts, headers });
+      if (res.status === 401) {
+        clearToken();
+        showLogin();
+        throw new Error('Session expired');
+      }
+      const text = await res.text();
+      let json;
+      try { json = text ? JSON.parse(text) : {}; } catch { json = { error: text }; }
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      return json;
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      try {
+        const data = await api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        });
+        setToken(data.token);
+        document.getElementById('header-meta').textContent = data.user.email;
+        showAdmin();
+      } catch (err) {
+        showLoginError(err.message || 'Login failed');
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      clearToken();
+      showLogin();
+    });
+
+    document.querySelectorAll('.tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        loadComments();
+      });
+    });
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadComments() {
+      const list = document.getElementById('comments-list');
+      list.innerHTML = '<div class="empty">Loading...</div>';
+      const filterQuery = currentFilter === '' ? '' : `&approved=${currentFilter}`;
+      try {
+        const result = await api(`/api/comment?projectId=${PROJECT_ID}${filterQuery}`);
+        renderComments(result.data.data || []);
+      } catch (err) {
+        list.innerHTML = `<div class="empty">Failed to load: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderComments(comments) {
+      const list = document.getElementById('comments-list');
+      if (!comments.length) {
+        list.innerHTML = '<div class="empty">No comments here.</div>';
+        return;
+      }
+      list.innerHTML = comments.map((c) => `
+        <div class="comment" data-id="${escapeHtml(c.id)}">
+          <div class="comment-meta">
+            <div>
+              <span class="comment-author">${escapeHtml(c.by_nickname || 'Anonymous')}</span>
+              ${c.by_email ? `<span style="color:#999"> &lt;${escapeHtml(c.by_email)}&gt;</span>` : ''}
+              ${c.approved
+                ? '<span class="pill pill-approved">Approved</span>'
+                : '<span class="pill pill-pending">Pending</span>'}
+            </div>
+            <span>${escapeHtml(c.parsedCreatedAt || c.created_at || '')}</span>
+          </div>
+          <div class="comment-page">on ${escapeHtml(c.page?.title || c.page?.slug || 'unknown page')}</div>
+          <div class="comment-content">${escapeHtml(c.content)}</div>
+          <div class="comment-actions">
+            ${!c.approved
+              ? `<button class="btn btn-approve" data-action="approve">Approve</button>`
+              : ''}
+            <button class="btn btn-delete" data-action="delete">Delete</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Wire action buttons
+      list.querySelectorAll('.comment').forEach((row) => {
+        const id = row.dataset.id;
+        row.querySelectorAll('[data-action]').forEach((btn) => {
+          btn.addEventListener('click', () => handleAction(id, btn.dataset.action, btn));
+        });
+      });
+    }
+
+    async function handleAction(commentId, action, btn) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = action === 'approve' ? 'Approving...' : 'Deleting...';
+      try {
+        if (action === 'approve') {
+          await api(`/api/comment/${commentId}/approve`, { method: 'POST' });
+        } else if (action === 'delete') {
+          if (!confirm('Delete this comment? (soft delete, can be recovered from D1)')) {
+            btn.disabled = false;
+            btn.textContent = original;
+            return;
+          }
+          await api(`/api/comment/${commentId}`, { method: 'DELETE' });
+        }
+        loadComments();
+      } catch (err) {
+        showAdminError(err.message || 'Action failed');
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    // Boot
+    if (getToken()) {
+      // Validate session by hitting /api/user
+      api('/api/user').then((data) => {
+        document.getElementById('header-meta').textContent = data.data.email;
+        showAdmin();
+      }).catch(() => {
+        showLogin();
+      });
+    } else {
+      showLogin();
+    }
+  </script>
+</body>
+</html>
