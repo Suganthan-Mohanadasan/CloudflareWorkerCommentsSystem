@@ -13,7 +13,14 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  // Production route is comments.suganthan.com. The test subdomain stays bound
+  // to the same worker so old moderator-email magic links keep resolving;
+  // remove it once nothing in flight points at it.
   "routes": [
+    {
+      "pattern": "comments.suganthan.com",
+      "custom_domain": true
+    },
     {
       "pattern": "comments-test.suganthan.com",
       "custom_domain": true
@@ -39,7 +46,7 @@
     }
   ],
   "vars": {
-    "SITE_URL": "https://comments-test.suganthan.com",
+    "SITE_URL": "https://comments.suganthan.com",
     // FROM_EMAIL is the verified SES sender. Must be verified in SES (domain
     // verification of suganthan.com covers this).
     "FROM_EMAIL": "comments@suganthan.com",

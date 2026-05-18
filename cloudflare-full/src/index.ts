@@ -54,6 +54,9 @@ const app = new Hono<{ Bindings: Env }>();
 const ALLOWED_ORIGINS = [
   'https://suganthan.com',
   'https://www.suganthan.com',
+  'https://comments.suganthan.com',
+  // Keep the test origin alive for now so old email magic links and any open
+  // tabs still hitting the test host don't break. Drop once nothing in flight.
   'https://comments-test.suganthan.com',
 ];
 app.use('*', cors({
