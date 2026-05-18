@@ -1,5 +1,11 @@
 {
-  "name": "commentssystem",
+  // Cloudflare Workers config for suganthan.com comments system.
+  // IDs marked REPLACE_ME are filled in after creating D1/KV/R2 resources via wrangler.
+  // Secrets (JWT_SECRET, TURNSTILE_SECRET) are NOT in this file. Set them via:
+  //   wrangler secret put JWT_SECRET
+  //   wrangler secret put TURNSTILE_SECRET
+  "name": "suganthan-comments",
+  "account_id": "f98bba70cc78b3d6bc6b42be9bc95959",
   "main": "src/index.ts",
   "compatibility_date": "2025-03-07",
   "compatibility_flags": ["nodejs_compat"],
@@ -7,6 +13,12 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "routes": [
+    {
+      "pattern": "comments-test.suganthan.com",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": "./dist/",
     "binding": "ASSETS",
@@ -15,27 +27,25 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "cusdis-comments",
-      "database_id": "e7632a77-efd7-4c1f-9ae0-29d86c32bcf0"
+      "database_name": "suganthan-comments",
+      "database_id": "REPLACE_ME_AFTER_WRANGLER_D1_CREATE"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "e007be092f224e678d2eccb9e7a79549",
-      "preview_id": "e007be092f224e678d2eccb9e7a79549"
+      "id": "REPLACE_ME_AFTER_WRANGLER_KV_CREATE",
+      "preview_id": "REPLACE_ME_AFTER_WRANGLER_KV_CREATE"
     }
   ],
   "r2_buckets": [
     {
       "binding": "R2",
-      "bucket_name": "cusdis-uploads"
+      "bucket_name": "suganthan-comments-uploads"
     }
   ],
   "vars": {
-    "SITE_URL": "https://commentssystem.arie-f50.workers.dev",
-    "FROM_EMAIL": "noreply@yourdomain.com",
-    "JWT_SECRET": "6c021dc7e15e87ee2784a233e03ffc90c777099fd845a14c5487bb16631b652f0d5a793cf0053b619143aa5f00aaefe1936dabec4fe69b5a0efdac4265716832",
-    "SENDGRID_API_KEY": ""
+    "SITE_URL": "https://comments-test.suganthan.com",
+    "FROM_EMAIL": "sugan@basicgravity.com"
   }
 }

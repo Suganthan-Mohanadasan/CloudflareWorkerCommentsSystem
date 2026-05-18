@@ -20,16 +20,40 @@ export interface Env {
   R2: R2Bucket;
   ASSETS: Fetcher;
   JWT_SECRET: string;
+  TURNSTILE_SECRET: string;
   SENDGRID_API_KEY?: string;
   FROM_EMAIL?: string;
   SITE_URL: string;
 }
 
+// Cloudflare Turnstile server-side verification.
+// Called from the public POST /api/open/comments handler to block automated abuse
+// before any DB write happens. Token comes from the widget's Turnstile challenge.
+async function verifyTurnstile(token: string, secret: string, ip: string): Promise<boolean> {
+  const form = new FormData();
+  form.append('secret', secret);
+  form.append('response', token);
+  form.append('remoteip', ip);
+  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    body: form,
+  });
+  const json = await res.json() as { success: boolean };
+  return json.success === true;
+}
+
 const app = new Hono<{ Bindings: Env }>();
 
-// CORS middleware
+// CORS: locked to the production domain, www variant, and the test subdomain.
+// The widget is loaded as an iframe from the comments host onto these origins,
+// so they are the only origins that need cross-origin access to the API.
+const ALLOWED_ORIGINS = [
+  'https://suganthan.com',
+  'https://www.suganthan.com',
+  'https://comments-test.suganthan.com',
+];
 app.use('*', cors({
-  origin: '*',
+  origin: (origin) => (origin && ALLOWED_ORIGINS.includes(origin) ? origin : null),
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Timezone-Offset'],
 }));
@@ -235,14 +259,26 @@ app.post('/api/open/comments', async (c) => {
   const commentService = new CommentService(c.env);
   const projectService = new ProjectService(c.env);
   const emailService = new EmailService(c.env);
-  
+
   const body = await c.req.json();
   const { appId, pageId, content, email, nickname, parentId, acceptNotify, pageTitle, pageUrl } = body;
-  
+  const turnstileToken = body['cf-turnstile-response'];
+
+  // Verify Turnstile BEFORE any DB writes. Rejects bots that did not solve the
+  // challenge widget. Missing token = 400, failed verify = 403.
+  if (!turnstileToken) {
+    throw new HTTPException(400, { message: 'Missing anti-bot token' });
+  }
+  const ip = c.req.header('CF-Connecting-IP') || '';
+  const ok = await verifyTurnstile(turnstileToken, c.env.TURNSTILE_SECRET, ip);
+  if (!ok) {
+    throw new HTTPException(403, { message: 'Anti-bot check failed' });
+  }
+
   if (!appId || !pageId || !content || !nickname) {
     throw new HTTPException(400, { message: 'Missing required fields' });
   }
-  
+
   const isDeleted = await projectService.isDeleted(appId);
   if (isDeleted) {
     throw new HTTPException(404, { message: 'Project not found' });

@@ -37,9 +37,22 @@ export class CommentService {
     this.pageService = new PageService(env);
   }
 
+  private escapeHtml(input: string): string {
+    // Escape HTML entities before any markdown rendering. Prevents stored XSS
+    // by ensuring user content cannot inject tags or attributes.
+    return input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   private parseMarkdown(content: string): string {
-    // Simple markdown parsing - just handle basic formatting
-    return content
+    // Escape HTML entities FIRST so user input cannot inject tags. Markdown
+    // regex patterns (** * `) still match because they do not contain entities.
+    const escaped = this.escapeHtml(content);
+    return escaped
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code>$1</code>')
@@ -198,6 +211,33 @@ export class CommentService {
     },
     parentId?: string
   ) {
+    // Input validation (rejects empty, too-long, malformed)
+    const content = (body.content ?? '').trim();
+    if (!content) {
+      throw new Error('Comment content is required');
+    }
+    if (content.length > 5000) {
+      throw new Error('Comment too long (max 5000 characters)');
+    }
+
+    const nickname = (body.nickname ?? '').trim();
+    if (!nickname) {
+      throw new Error('Nickname is required');
+    }
+    if (nickname.length > 100) {
+      throw new Error('Nickname too long (max 100 characters)');
+    }
+
+    const email = body.email ? body.email.trim() : '';
+    if (email) {
+      if (email.length > 254) {
+        throw new Error('Email too long');
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new Error('Invalid email format');
+      }
+    }
+
     // Ensure page exists
     const page = await this.pageService.upsertPage(pageSlug, projectId, {
       pageTitle: body.pageTitle,
@@ -206,16 +246,16 @@ export class CommentService {
 
     const commentId = crypto.randomUUID();
 
-    // Create comment
+    // Create comment (using validated, trimmed values)
     const result = await this.env.DB.prepare(`
       INSERT INTO comments (id, page_id, content, by_email, by_nickname, parent_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `).bind(
       commentId,
       page.id,
-      body.content,
-      body.email || null,
-      body.nickname,
+      content,
+      email || null,
+      nickname,
       parentId || null
     ).run();
 

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cusdis Comments</title>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         * {
             box-sizing: border-box;
@@ -288,6 +289,10 @@
                     <label for="acceptNotify">Notify me when someone replies</label>
                 </div>
 
+                <div class="form-group">
+                    <div class="cf-turnstile" data-sitekey="0x4AAAAAADRvnHqwcYsyc_i1" data-theme="auto"></div>
+                </div>
+
                 <button type="submit" class="btn btn-primary">Post Comment</button>
             </form>
         </div>
@@ -426,6 +431,7 @@
                                         <input type="email" name="email" class="form-control" placeholder="Email (optional)">
                                     </div>
                                 </div>
+                                <div class="form-group cf-turnstile-container"></div>
                                 <button type="submit" class="btn btn-primary">Post Reply</button>
                                 <button type="button" class="btn-link" onclick="this.closest('.reply-form').style.display='none'">Cancel</button>
                             </form>
@@ -444,14 +450,24 @@
                 
                 if (!isVisible) {
                     form.style.display = 'block';
-                    
+
                     // Setup form submission
                     const formElement = form.querySelector('.reply-form-inner');
                     formElement.addEventListener('submit', (e) => {
                         e.preventDefault();
                         this.submitReply(formElement);
                     });
-                    
+
+                    // Render Turnstile on demand (one widget per reply form, only when opened).
+                    const turnstileContainer = form.querySelector('.cf-turnstile-container');
+                    if (window.turnstile && turnstileContainer && !turnstileContainer.dataset.rendered) {
+                        window.turnstile.render(turnstileContainer, {
+                            sitekey: '0x4AAAAAADRvnHqwcYsyc_i1',
+                            theme: 'auto',
+                        });
+                        turnstileContainer.dataset.rendered = '1';
+                    }
+
                     this.resizeIframe();
                 }
             }
@@ -465,6 +481,14 @@
 
                 if (!data.content.trim() || !data.nickname.trim()) {
                     this.showError('Please fill in all required fields.');
+                    return;
+                }
+
+                // Turnstile hidden input has name="cf-turnstile-response". Pull it from FormData
+                // and refuse to submit if missing — saves a wasted server round-trip.
+                const turnstileToken = data['cf-turnstile-response'];
+                if (!turnstileToken) {
+                    this.showError('Please complete the anti-bot check before posting.');
                     return;
                 }
 
@@ -487,7 +511,8 @@
                             content: data.content,
                             nickname: data.nickname,
                             email: data.email,
-                            acceptNotify: data.acceptNotify === 'on'
+                            acceptNotify: data.acceptNotify === 'on',
+                            'cf-turnstile-response': turnstileToken
                         })
                     });
 
@@ -497,10 +522,12 @@
 
                     this.showSuccess('Comment posted successfully! It will appear after moderation.');
                     form.reset();
+                    if (window.turnstile) window.turnstile.reset();
                     this.loadComments(); // Reload to show updated count
                 } catch (error) {
                     console.error('Error posting comment:', error);
                     this.showError('Failed to post comment. Please try again.');
+                    if (window.turnstile) window.turnstile.reset();
                 } finally {
                     this.isSubmitting = false;
                     submitBtn.disabled = false;
@@ -515,6 +542,12 @@
 
                 if (!data.content.trim() || !data.nickname.trim()) {
                     this.showError('Please fill in all required fields.');
+                    return;
+                }
+
+                const turnstileToken = data['cf-turnstile-response'];
+                if (!turnstileToken) {
+                    this.showError('Please complete the anti-bot check before posting.');
                     return;
                 }
 
@@ -536,7 +569,8 @@
                             content: data.content,
                             nickname: data.nickname,
                             email: data.email,
-                            parentId: parentId
+                            parentId: parentId,
+                            'cf-turnstile-response': turnstileToken
                         })
                     });
 
