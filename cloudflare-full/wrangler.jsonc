@@ -40,6 +40,10 @@
   ],
   "vars": {
     "SITE_URL": "https://comments-test.suganthan.com",
-    "FROM_EMAIL": "sugan@basicgravity.com"
+    // FROM_EMAIL is the verified SES sender. Must be verified in SES (domain
+    // verification of suganthan.com covers this).
+    "FROM_EMAIL": "comments@suganthan.com",
+    // AWS_REGION is not sensitive, put it in vars so it survives `wrangler secret list`.
+    "AWS_REGION": "us-east-1"
   }
 }
